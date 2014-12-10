@@ -27,6 +27,7 @@ const PLUGIN_NAME = 'gulp-usemin-reloaded';
 var gulpUtil = require('gulp-util'),
 	through = require('through'),
 	path = require('path'),
+	XRegExp = require('xregexp').XRegExp,
 	Buffer = require('buffer').Buffer,
 	jsdom = require('jsdom'),
 	$ = require('jquery')( jsdom.jsdom().parentWindow );
@@ -36,6 +37,43 @@ module.exports = function (options) {
 
 	// This will live our array of files
 	var files = [],
+		parseHtml = function (html) {
+            var ret = [],
+                $html = $( $.parseHTML( html.replace(/(?:\r\n|\r|\n)/g,'') ) ),
+                actions = XRegExp.build('({{action}})(?:\:({{context}}))?(?:\s+({{outpath}}))?', {
+                	action: /[a-zA-Z0-9]+/,
+                	context: /[a-zA-Z0-9]+/,
+                	outpath: /[a-zA-Z0-9\.\/]+/
+                }, 'x'),
+                tmp = {};
+
+            $html
+            .each( function (i,el) {
+                if ( el.nodeName == '#comment' ) {
+                	if ( el.textContent.indexOf('end') == -1 ) {
+                		var res = XRegExp.exec( el.textContent, actions );
+                		if ( res.action ) tmp['action'] = res.action;
+                		if ( res.context ) tmp['context'] = res.context;
+                		if ( res.outpath ) tmp['outpath'] = res.outpath;
+                		tmp['tags'] = [];
+                	} else {
+                		ret.push( tmp );
+                		tmp = {};
+                	}
+                } else {
+                	var tag = {};
+                	tag[el.nodeName] = {};
+                	for ( var i in el.attributes ) {
+                		var attr = el.attributes[i];
+                		if ( attr.name && attr.name > '' && attr.value && attr.value > '' )
+                			tag[el.nodeName][attr.name] = attr.value;
+                	}
+                	tmp['tags'].push( tag );
+                }
+            })
+
+            return ret;
+        }
 		forEachFile = function (file) {
 			files.push( file );
 		},
@@ -64,7 +102,10 @@ module.exports = function (options) {
 				}.bind( this );
 
 				// Run the UseMin tokenizer processor
-				console.log( fileContents );
+				$.each( fileContents, function ( fileName, content ) {
+					var ret = parseHtml( content );
+					console.log( fileName, ret );
+				});
 		};
 
 	return through( forEachFile, beforeEnd );
