@@ -1,0 +1,42 @@
+{
+  "name": "gulp-usemin-reloaded",
+  "description": "A tokenizer task for Gulp based on usemin logic but heavily improved",
+  "version": "0.0.0",
+  "homepage": "https://github.com/julianxhokaxhiu/gulp-usemin-reloaded",
+  "author": {
+    "name": "Julian Xhokaxhiu",
+    "email": "info@julianxhokaxhiu.com",
+    "url": "http://julianxhokaxhiu.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julianxhokaxhiu/gulp-usemin-reloaded.git"
+  },
+  "bugs": {
+    "url": "https://github.com/julianxhokaxhiu/gulp-usemin-reloaded/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/julianxhokaxhiu/gulp-usemin-reloaded/blob/master/LICENSE"
+    }
+  ],
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "main": "gulp-usemin-reloaded.js",
+  "keywords": [
+    "gulpplugin",
+    "usemin",
+    "html",
+    "css",
+    "js",
+    "javascript"
+  ],
+  "dependencies": {
+    "through": "^2.3.6",
+    "gulp-util": "^2.2.14",
+    "jquery" : "^2.1.1",
+    "jsdom" : "^1.4.1"
+  }
+}
