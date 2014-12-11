@@ -3,12 +3,12 @@ var gulp = require('gulp'),
 
 gulp.task('test', function() {
 	return gulp
-	.src( 'test/*.html' )
+	.src( 'test/in/*.html' )
 	.pipe(
 		usemin()
 	)
 	.pipe(
-		gulp.dest( 'test/' )
+		gulp.dest( 'test/out/' )
 	);
 });
 
