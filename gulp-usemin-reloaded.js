@@ -36,9 +36,7 @@ var gulpUtil = require('gulp-util'),
 // Plugin level function(dealing with files)
 module.exports = function (options) {
 
-	// This will live our array of files
-	var files = [],
-		parseHtml = function (html) {
+	var parseHtml = function (html) {
             var ret = [],
                 $html = $( $.parseHTML( html.replace(/(?:\r\n|\r|\n)/g,''), true ) ),
                 actions = XRegExp.build('({{action}})(?:\:({{context}}))?(?:\s+({{outpath}}))?', {
