@@ -24,14 +24,16 @@
 
 const PLUGIN_NAME = 'gulp-usemin-reloaded';
 
-var gulpUtil = require('gulp-util'),
+var jsdom = require('jsdom'),
+	$ = require('jquery')( jsdom.jsdom().parentWindow ),
+	gulpUtil = require('gulp-util'),
 	through = require('through'),
-	path = require('path'),
 	XRegExp = require('xregexp').XRegExp,
 	Buffer = require('buffer').Buffer,
-	jsdom = require('jsdom'),
-	$ = require('jquery')( jsdom.jsdom().parentWindow ),
-	util = require('util');
+	// Native NodeJS
+	util = require('util'),
+	path = require('path'),
+	fs = require('fs');
 
 // Plugin level function(dealing with files)
 module.exports = function (options) {
@@ -39,22 +41,31 @@ module.exports = function (options) {
 	var parseHtml = function (html) {
             var ret = [],
                 $html = $( $.parseHTML( html.replace(/(?:\r\n|\r|\n)/g,''), true ) ),
-                actions = XRegExp.build('({{action}})(?:\:({{context}}))?(?:\s+({{outpath}}))?', {
-                	action: /[a-zA-Z0-9]+/,
-                	context: /[a-zA-Z0-9]+/,
-                	outpath: /[a-zA-Z0-9\.\/]+/
-                }, 'x'),
+                rules = XRegExp.build(
+                	'({{action}}) # build \n\
+                	(?:\\:({{context}}))? # css \n\
+                	(?:\\s+({{outpath}}))? # path/to/dest.ext \n\
+                	(?:\\s+\\[({{attrs}})\\])? # [media="screen"]',
+	                {
+	                	action: /[a-zA-Z0-9]+/,
+	                	context: /[a-zA-Z0-9]+/,
+	                	outpath: /[a-zA-Z0-9\.\/\-\_]+/,
+	                	attrs: /[a-zA-Z0-9\=\-\"\s+]+/
+	                },
+	                'x'
+	            ),
                 tmp = {};
 
             $html
             .each( function (i,el) {
                 if ( el.nodeName == '#comment' ) {
                 	if ( el.textContent.indexOf('end') == -1 ) {
-                		var res = XRegExp.exec( el.textContent, actions );
+                		var res = XRegExp.exec( el.textContent, rules );
                 		if ( res.length ) {
 	                		if ( res.action ) tmp['action'] = res.action;
 	                		if ( res.context ) tmp['context'] = res.context;
 	                		if ( res.outpath ) tmp['outpath'] = res.outpath;
+	                		if ( res.attrs ) tmp['attrs'] = res.attrs;
 	                		tmp['nodes'] = [];
 	                		tmp['startTag'] = el.textContent;
 	                	}
@@ -66,13 +77,13 @@ module.exports = function (options) {
                 		tmp = {};
                 	}
                 } else {
-                	var tag = {},
-                		key = el.nodeName.toLowerCase();
-                	tag[key] = {};
+                	var tag = {
+                			'_tagName' : el.nodeName.toLowerCase()
+                		};
                 	for ( var i in el.attributes ) {
                 		var attr = el.attributes[i];
                 		if ( (attr.name && attr.name > '') || (attr.value && attr.value > '') )
-                			tag[key][attr.name] = attr.value;
+                			tag[attr.name] = attr.value;
                 	}
                 	tmp['nodes'].push( tag );
                 }
@@ -80,22 +91,89 @@ module.exports = function (options) {
 
             return ret;
         },
-		forEachFile = function (file) {
-			this.pause();
+        useMin = function ( content ) {
+        	var parsed = parseHtml( content );
 
+        	for( var i in parsed ) {
+        		var obj = parsed[i];
+
+        		if ( obj) {
+	        		if ( obj.nodes )
+	        			obj['files'] = obj.nodes.map( function (node) {
+		        			var filePath = path.join( options.basePath, node.href || node.src );
+
+		        			return new gulpUtil.File({
+		        				path: filePath,
+		        				contents: fs.readFileSync(filePath)
+		        			});
+		        		})
+	        	}
+        	}
+
+        	ret = processTasks( parsed, content );
+
+			return ret;
+        },
+        processTasks = function ( parsed, content ) {
+        	var ret = content;
+
+        	for ( var i in parsed ) {
+        		var obj = parsed[i],
+        			custom = null;
+
+	        	if ( obj && obj.action && obj.context ) {
+	        		var tasks = options.rules[obj.action][obj.context];
+
+	        		if ( $.isFunction( tasks ) ) {
+	        			// Callback freedom for the user
+	        			custom = tasks( obj, ret );
+	        		} else {
+	        			// Stream tasks, we have to handle them
+	        		}
+
+	        		ret = finalizeRule( obj, custom, ret );
+	        	}
+	        }
+
+        	return ret;
+        },
+        finalizeRule = function ( obj, custom, content ) {
+        	var ret = content,
+        		ruleRegExp = XRegExp.build(
+        			'(<\!-- {{start}} -->[a-zA-Z0-9_\-<>"\s+\/\.=]+<\!-- {{end}} -->)',
+        			{
+        				start: obj.startTag,
+        				end: obj.endTag
+        			},
+        			'x'
+        		);
+
+        	if ( !custom ) {
+        		var tag = '<' + obj.nodes[0]._tagName + ' ',
+        			srcAttr = (tag == 'script' ? 'src' : 'href'),
+        			customAttrs = ( obj.attrs ? ' ' + obj.attrs + ' ' : '' )
+        			endTag = (tag == 'script' ? '></script>' : '/>');
+
+        		custom = tag + srcAttr + '="' + obj.outpath + '" ' + customAttrs + endTag
+        	}
+
+        	ret = XRegExp.replace( content, ruleRegExp, custom );
+
+        	return ret;
+        },
+		forEachFile = function (file) {
 			var fileName = file.relative,
 				content = file.contents.toString(),
 				error = null,
-				ret = null,
-				parsed = parseHtml( content );
+				ret = null;
 
-			console.log(
-				fileName,
-				util.inspect( parsed, {
-					depth: null,
-					colors: true
-				})
-			);
+				console.log(
+					fileName,
+					util.inspect( useMin(content), {
+						depth: null,
+						colors: true
+					})
+				);
 
 			// Save the content and return it
 			/*if ( data ) {
@@ -115,6 +193,20 @@ module.exports = function (options) {
 		beforeEnd = function() {
 			this.emit( 'end' );
 		};
+
+	// Check if at least a destionation directory have been given
+	options = $.extend({
+		basePath: __dirname,
+		rules: {
+			build: {
+				css: [],
+				js: [],
+				remove: function() {
+					return null;
+				}
+			}
+		}
+	}, options );
 
 	return through( forEachFile, beforeEnd );
 };
