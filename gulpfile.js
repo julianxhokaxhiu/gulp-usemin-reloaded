@@ -6,6 +6,9 @@ gulp.task('test', function() {
 	.src( 'test/*.html' )
 	.pipe(
 		usemin()
+	)
+	.pipe(
+		gulp.dest( 'test/' )
 	);
 });
 
