@@ -162,6 +162,9 @@ module.exports = function (options) {
         	return ret;
         },
 		forEachFile = function (file) {
+			// Save the basePath for later
+			options.basePath = file.base;
+
 			var fileName = file.relative,
 				content = file.contents.toString(),
 				error = null,
@@ -186,13 +189,13 @@ module.exports = function (options) {
 		};
 
 	// Check if at least a destionation directory have been given
-	options = $.extend({
-		basePath: __dirname,
+	options = $.extend(true, {
 		rules: {
 			build: {
-				css: [],
-				js: [],
 				remove: function() {
+					return '';
+				},
+				concat: function() {
 					return '';
 				}
 			}
