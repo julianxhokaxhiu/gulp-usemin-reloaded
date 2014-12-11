@@ -53,12 +53,18 @@ module.exports = function (options) {
                 if ( el.nodeName == '#comment' ) {
                 	if ( el.textContent.indexOf('end') == -1 ) {
                 		var res = XRegExp.exec( el.textContent, actions );
-                		if ( res.action ) tmp['action'] = res.action;
-                		if ( res.context ) tmp['context'] = res.context;
-                		if ( res.outpath ) tmp['outpath'] = res.outpath;
-                		tmp['nodes'] = [];
+                		if ( res.length ) {
+	                		if ( res.action ) tmp['action'] = res.action;
+	                		if ( res.context ) tmp['context'] = res.context;
+	                		if ( res.outpath ) tmp['outpath'] = res.outpath;
+	                		tmp['nodes'] = [];
+	                		tmp['startTag'] = el.textContent;
+	                	}
                 	} else {
-                		ret.push( tmp );
+                		if ( Object.keys(tmp).length ) {
+                			tmp['endTag'] = el.textContent;
+                			ret.push( tmp );
+                		}
                 		tmp = {};
                 	}
                 } else {
@@ -75,45 +81,41 @@ module.exports = function (options) {
             })
 
             return ret;
-        }
+        },
 		forEachFile = function (file) {
-			files.push( file );
+			this.pause();
+
+			var fileName = file.relative,
+				content = file.contents.toString(),
+				error = null,
+				ret = null,
+				parsed = parseHtml( content );
+
+			console.log(
+				fileName,
+				util.inspect( parsed, {
+					depth: null,
+					colors: true
+				})
+			);
+
+			// Save the content and return it
+			/*if ( data ) {
+				var outFile = new gulpUtil.File({
+					base: file.base,
+					contents: new Buffer( data ),
+					cwd: file.cwd,
+					path: path.join(file.base, options.fileName)
+				});
+
+				this.emit( 'data', outFile );
+				this.resume();
+			} else {
+				this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
+			}*/
 		},
 		beforeEnd = function() {
-			var fileContents = {},
-				filePaths = files.map(function(file){
-					fileContents[file.relative] = file.contents.toString();
-
-					return file.path;
-				}),
-				firstFile = files[0],
-				callback = function ( error, data ) {
-					if ( data ) {
-						var outFile = new gulpUtil.File({
-							base: firstFile.base,
-							contents: new Buffer( data ),
-							cwd: firstFile.cwd,
-							path: path.join(firstFile.base, options.fileName)
-						});
-
-						this.emit( 'data', outFile );
-						this.emit( 'end' );
-					} else {
-						this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
-					}
-				}.bind( this );
-
-				// Run the UseMin tokenizer processor
-				$.each( fileContents, function ( fileName, content ) {
-					var ret = parseHtml( content );
-					console.log(
-						fileName,
-						util.inspect( ret, {
-							depth: null,
-							colors: true
-						})
-					);
-				});
+			this.emit( 'end' );
 		};
 
 	return through( forEachFile, beforeEnd );
