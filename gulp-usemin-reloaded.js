@@ -30,7 +30,8 @@ var gulpUtil = require('gulp-util'),
 	XRegExp = require('xregexp').XRegExp,
 	Buffer = require('buffer').Buffer,
 	jsdom = require('jsdom'),
-	$ = require('jquery')( jsdom.jsdom().parentWindow );
+	$ = require('jquery')( jsdom.jsdom().parentWindow ),
+	util = require('util');
 
 // Plugin level function(dealing with files)
 module.exports = function (options) {
@@ -39,7 +40,7 @@ module.exports = function (options) {
 	var files = [],
 		parseHtml = function (html) {
             var ret = [],
-                $html = $( $.parseHTML( html.replace(/(?:\r\n|\r|\n)/g,'') ) ),
+                $html = $( $.parseHTML( html.replace(/(?:\r\n|\r|\n)/g,''), true ) ),
                 actions = XRegExp.build('({{action}})(?:\:({{context}}))?(?:\s+({{outpath}}))?', {
                 	action: /[a-zA-Z0-9]+/,
                 	context: /[a-zA-Z0-9]+/,
@@ -55,20 +56,21 @@ module.exports = function (options) {
                 		if ( res.action ) tmp['action'] = res.action;
                 		if ( res.context ) tmp['context'] = res.context;
                 		if ( res.outpath ) tmp['outpath'] = res.outpath;
-                		tmp['tags'] = [];
+                		tmp['nodes'] = [];
                 	} else {
                 		ret.push( tmp );
                 		tmp = {};
                 	}
                 } else {
-                	var tag = {};
-                	tag[el.nodeName] = {};
+                	var tag = {},
+                		key = el.nodeName.toLowerCase();
+                	tag[key] = {};
                 	for ( var i in el.attributes ) {
                 		var attr = el.attributes[i];
-                		if ( attr.name && attr.name > '' && attr.value && attr.value > '' )
-                			tag[el.nodeName][attr.name] = attr.value;
+                		if ( (attr.name && attr.name > '') || (attr.value && attr.value > '') )
+                			tag[key][attr.name] = attr.value;
                 	}
-                	tmp['tags'].push( tag );
+                	tmp['nodes'].push( tag );
                 }
             })
 
@@ -104,7 +106,13 @@ module.exports = function (options) {
 				// Run the UseMin tokenizer processor
 				$.each( fileContents, function ( fileName, content ) {
 					var ret = parseHtml( content );
-					console.log( fileName, ret );
+					console.log(
+						fileName,
+						util.inspect( ret, {
+							depth: null,
+							colors: true
+						})
+					);
 				});
 		};
 
