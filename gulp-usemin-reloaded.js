@@ -93,7 +93,7 @@ module.exports = function (options) {
 
 	            return ret;
 	        },
-	        useMin = function ( content ) {
+	        useMin = function ( content, callback ) {
 	        	var parsed = parseHtml( content );
 
 	        	for( var i in parsed ) {
@@ -112,38 +112,40 @@ module.exports = function (options) {
 		        	}
 	        	}
 
-	        	ret = processTasks( parsed, content );
-
-				return ret;
+	        	processTasks( parsed, content, callback );
 	        },
-	        processTasks = function ( parsed, content ) {
-	        	var ret = content;
+	        processTasks = function ( parsed, content, callback ) {
+	        	var that = this;
 
-	        	for ( var i in parsed ) {
-	        		var obj = parsed[i],
-	        			custom = null;
+				for ( var i in parsed ) {
+	        		var obj = parsed[i];
 
 		        	if ( obj && obj.action && obj.context ) {
 		        		var tasks = options.rules[obj.action][obj.context];
 
 		        		if ( $.isFunction( tasks ) ) {
 		        			// Callback freedom for the user
-		        			custom = tasks( obj, ret );
+		        			var custom = tasks( obj, content );
+		        			callback( finalizeRule( obj, custom, content ) );
 		        		} else if ( $.isArray( tasks ) ) {
 		        			// Concat all the files if the user didn't already request that
 							if (tasks.indexOf('concat') == -1)
 								tasks.unshift('concat');
 		        			// Stream tasks, we have to handle them
-		        			processStream( 0, tasks, obj['files'], obj.outPath );
-		        		}
+		        			processStream( 0, tasks, obj['files'], obj.outPath, function (files){
+								for ( var i in files ) {
+									var file = files[i];
+									that.emit( 'data', file );
 
-		        		ret = finalizeRule( obj, custom, ret );
+									obj.outPath = file.relative;
+									callback( finalizeRule( obj, null, content ) );
+								};
+		        			});
+		        		}
 		        	}
 		        }
-
-	        	return ret;
-	        },
-	        processStream = function ( index, tasks, files, outPath ) {
+	        }.bind(this),
+	        processStream = function ( index, tasks, files, outPath, callback ) {
 	        	var newFiles = [],
 	        		task = tasks[index],
 	        		save = function (file) {
@@ -161,12 +163,9 @@ module.exports = function (options) {
 				}
 
 				if ( tasks[++index] )
-					processStream( index, tasks, newFiles, outPath );
+					processStream( index, tasks, newFiles, outPath, callback );
 				else {
-					for( var i in newFiles ) {
-						var file = newFiles[i];
-						this.emit( 'data', file );
-					};
+					callback( newFiles );
 					this.resume();
 				}
 	        }.bind(this),
@@ -216,28 +215,28 @@ module.exports = function (options) {
 
 			// It's a kind of magic... ♪
 			this.pause();
-			ret = useMin(content);
+			ret = useMin( content, function (content){
+				// Save the content and return it
+				if ( ret ) {
+					var outFile = new gulpUtil.File({
+						base: file.base,
+						contents: new Buffer( ret ),
+						cwd: file.cwd,
+						path: path.join(file.base, fileName)
+					});
 
-			// Save the content and return it
-			if ( ret ) {
-				var outFile = new gulpUtil.File({
-					base: file.base,
-					contents: new Buffer( ret ),
-					cwd: file.cwd,
-					path: path.join(file.base, fileName)
-				});
-
-				this.emit( 'data', outFile );
-			} else {
-				this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
-			}
+					this.emit( 'data', outFile );
+				} else {
+					this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
+				}
+			});
 		},
 		beforeEnd = function() {
 			this.emit( 'end' );
 		};
 
 	// Check if at least a destionation directory have been given
-	options = $.extend(true, {
+	options = $.extend( true, {
 		rules: {
 			build: {
 				remove: function() {
