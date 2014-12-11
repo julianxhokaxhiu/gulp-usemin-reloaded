@@ -165,30 +165,21 @@ module.exports = function (options) {
 			var fileName = file.relative,
 				content = file.contents.toString(),
 				error = null,
-				ret = null;
-
-				console.log(
-					fileName,
-					util.inspect( useMin(content), {
-						depth: null,
-						colors: true
-					})
-				);
+				ret = useMin(content);
 
 			// Save the content and return it
-			/*if ( data ) {
+			if ( ret ) {
 				var outFile = new gulpUtil.File({
 					base: file.base,
-					contents: new Buffer( data ),
+					contents: new Buffer( ret ),
 					cwd: file.cwd,
-					path: path.join(file.base, options.fileName)
+					path: path.join(file.base, fileName)
 				});
 
 				this.emit( 'data', outFile );
-				this.resume();
 			} else {
 				this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
-			}*/
+			}
 		},
 		beforeEnd = function() {
 			this.emit( 'end' );
