@@ -140,21 +140,21 @@ module.exports = function (options) {
         finalizeRule = function ( obj, custom, content ) {
         	var ret = content,
         		ruleRegExp = XRegExp.build(
-        			'(<\!-- {{start}} -->[a-zA-Z0-9_\-<>"\s+\/\.=]+<\!-- {{end}} -->)',
+        			'(<!--{{start}}-->[a-zA-Z0-9_\\-<>"\\s+\\/\\.=]+<!--{{end}}-->)',
         			{
-        				start: obj.startTag,
+        				start: obj.startTag.replace('[','\\[').replace(']','\\]'),
         				end: obj.endTag
-        			},
-        			'x'
+        			}
         		);
 
-        	if ( !custom ) {
-        		var tag = '<' + obj.nodes[0]._tagName + ' ',
+        	if ( custom == null ) {
+        		var tag = obj.nodes[0]._tagName
+        			startTag = '<' + tag + ' ',
         			srcAttr = (tag == 'script' ? 'src' : 'href'),
         			customAttrs = ( obj.attrs ? ' ' + obj.attrs + ' ' : '' )
         			endTag = (tag == 'script' ? '></script>' : '/>');
 
-        		custom = tag + srcAttr + '="' + obj.outpath + '" ' + customAttrs + endTag
+        		custom = startTag + srcAttr + '="' + obj.outpath + '"' + customAttrs + endTag
         	}
 
         	ret = XRegExp.replace( content, ruleRegExp, custom );
@@ -202,7 +202,7 @@ module.exports = function (options) {
 				css: [],
 				js: [],
 				remove: function() {
-					return null;
+					return '';
 				}
 			}
 		}
