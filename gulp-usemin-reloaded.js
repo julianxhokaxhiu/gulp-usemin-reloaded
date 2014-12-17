@@ -93,7 +93,7 @@ module.exports = function (options) {
 
 	            return ret;
 	        },
-	        useMin = function ( content, callback ) {
+	        useMin = function ( content ) {
 	        	var parsed = parseHtml( content );
 
 	        	for( var i in parsed ) {
@@ -112,10 +112,11 @@ module.exports = function (options) {
 		        	}
 	        	}
 
-	        	processTasks( parsed, content, callback );
+	        	return processTasks( parsed, content );
 	        },
-	        processTasks = function ( parsed, content, callback ) {
-	        	var that = this;
+	        processTasks = function ( parsed, content ) {
+	        	var that = this,
+                    ret = content;
 
 				for ( var i in parsed ) {
 	        		var obj = parsed[i];
@@ -126,7 +127,7 @@ module.exports = function (options) {
 		        		if ( $.isFunction( tasks ) ) {
 		        			// Callback freedom for the user
 		        			var custom = tasks( obj, content );
-		        			callback( finalizeRule( obj, custom, content ) );
+		        			ret = finalizeRule( obj, custom, ret );
 		        		} else if ( $.isArray( tasks ) ) {
 		        			// Concat all the files if the user didn't already request that
 							if (tasks.indexOf('concat') == -1)
@@ -138,12 +139,14 @@ module.exports = function (options) {
 									that.emit( 'data', file );
 
 									obj.outPath = file.relative;
-									callback( finalizeRule( obj, null, content ) );
+									ret = finalizeRule( obj, null, ret );
 								};
 		        			});
 		        		}
 		        	}
 		        }
+
+                return ret;
 	        }.bind(this),
 	        processStream = function ( index, tasks, files, outPath, callback ) {
 	        	var newFiles = [],
@@ -213,23 +216,22 @@ module.exports = function (options) {
 			// Save the basePath for later
 			options.basePath = file.base;
 
-			// It's a kind of magic... ♪
 			this.pause();
-			ret = useMin( content, function (content){
-				// Save the content and return it
-				if ( ret ) {
-					var outFile = new gulpUtil.File({
-						base: file.base,
-						contents: new Buffer( ret ),
-						cwd: file.cwd,
-						path: path.join(file.base, fileName)
-					});
+            // It's a kind of magic... ♪
+            ret = useMin( content );
 
-					this.emit( 'data', outFile );
-				} else {
-					this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
-				}
-			});
+			if ( ret ) {
+				var outFile = new gulpUtil.File({
+					base: file.base,
+					contents: new Buffer( ret ),
+					cwd: file.cwd,
+					path: path.join(file.base, fileName)
+				});
+
+				this.emit( 'data', outFile );
+			} else {
+				this.emit( 'error', new gulpUtil.PluginError(PLUGIN_NAME, error) );
+			}
 		},
 		beforeEnd = function() {
 			this.emit( 'end' );
