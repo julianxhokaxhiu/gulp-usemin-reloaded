@@ -241,7 +241,7 @@ module.exports = function (options) {
     options = $.extend( true, {
         rules: {
             build: {
-                remove: function() {
+                remove: function( object, content ) {
                     return '';
                 }
             }
