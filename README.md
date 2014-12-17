@@ -12,6 +12,12 @@ Once I've begun to develop using Gulp tasks and plugins, I've discovered that a 
 - Extensible rules (why stick only with `build:something` when you can write `myrule:context`?)
 - Gulp Vinyl Stream compatible using [gulp-through](https://github.com/mgcrea/gulp-through)
 
+# How to install
+
+```bash
+npm install gulp-usemin-reloaded
+```
+
 # Documentation
 
 ## Rules
