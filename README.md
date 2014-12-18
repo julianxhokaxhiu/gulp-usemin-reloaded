@@ -59,7 +59,7 @@ as **INPUT** parameters you have:
 - `object` is the parsed object of the current task rule (aka 'action`). It's a dictionary containing all the parsed HTML as a lookup dictionary.
 - `content` is the current evaluated content that can be manipulated directly from the callback.
 
-as **OUTPUT** it expect the handled content, in this case an empty string (we want to discard everything that is between `<!-- build:remove -->` and `<!-- endbuild -->`.
+as **OUTPUT** it expect the handled content, in this case an empty string (we want to discard everything that is between `<!-- build:remove -->` and `<!-- endbuild -->`. The replacement will be done ALWAYS by the plugin and not by you. So do NOT ever return the modified 'content' parameter. That is only a READ-ONLY var that you can use to base your decision (do 'if' or some other logical operators).
 
 You can declare as many _actions_ and _contexts_ you like. Their value can be:
 - `array` of other tasks to be run
