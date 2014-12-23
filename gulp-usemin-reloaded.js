@@ -61,7 +61,7 @@ module.exports = function (options) {
                 $html
                 .each( function (i,el) {
                     if ( el.nodeName == '#comment' ) {
-                        if ( el.textContent.indexOf('end') == -1 ) {
+                        if ( el.textContent.trim().indexOf('end') == 0 ) {
                             var res = XRegExp.exec( el.textContent, rules );
                             if ( res.length ) {
                                 if ( res.action ) tmp['action'] = res.action;
