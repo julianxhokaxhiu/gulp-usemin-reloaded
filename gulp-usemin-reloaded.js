@@ -62,6 +62,12 @@ module.exports = function (options) {
                 .each( function (i,el) {
                     if ( el.nodeName == '#comment' ) {
                         if ( el.textContent.trim().indexOf('end') == 0 ) {
+                            if ( Object.keys(tmp).length ) {
+                                tmp['endTag'] = el.textContent;
+                                ret.push( tmp );
+                            }
+                            tmp = {};
+                        } else {
                             var res = XRegExp.exec( el.textContent, rules );
                             if ( res.length ) {
                                 if ( res.action ) tmp['action'] = res.action;
@@ -71,12 +77,6 @@ module.exports = function (options) {
                                 tmp['nodes'] = [];
                                 tmp['startTag'] = el.textContent;
                             }
-                        } else {
-                            if ( Object.keys(tmp).length ) {
-                                tmp['endTag'] = el.textContent;
-                                ret.push( tmp );
-                            }
-                            tmp = {};
                         }
                     } else {
                         var tag = {
