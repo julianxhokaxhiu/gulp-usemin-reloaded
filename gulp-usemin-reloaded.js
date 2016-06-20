@@ -87,6 +87,9 @@ module.exports = function (options) {
                             if ( (attr.name && attr.name > '') || (attr.value && attr.value > '') )
                                 tag[attr.name] = attr.value;
                         }
+                        if (!tmp['nodes']) {
+                            tmp['nodes'] = [];
+                        }
                         tmp['nodes'].push( tag );
                     }
                 })
